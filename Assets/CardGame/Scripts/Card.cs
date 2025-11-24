@@ -1,6 +1,4 @@
-using System;
 using System.Collections;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -9,12 +7,15 @@ public class Card : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHand
     public bool IsDragging;
     public bool CanDrag;
     public bool Played;
+    public bool Discarded;
     private Canvas canvas;
     public CardManager cardManager;
     public GameObject target;
 
-    public int value;
+    public string letter;
     public Color color;
+    
+    
     
     private void Start()
     {
@@ -25,12 +26,16 @@ public class Card : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHand
 
     private void Update()
     {
-        if (Played || !CanDrag)
+        if (Discarded && gameObject != cardManager.lastDiscard)
         {
-            StartCoroutine(WaitAndDestroy(10));
+            DestroyAfter(1);
         }
     }
 
+    public void DestroyAfter(float time)
+    {
+        StartCoroutine(WaitAndDestroy(time));
+    }
     private IEnumerator WaitAndDestroy(float waitTime)
     {
         while (true)
@@ -43,7 +48,7 @@ public class Card : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHand
     
     public void OnBeginDrag(PointerEventData eventData)
     {
-        Debug.Log("OnBeginDrag");
+        //Debug.Log("OnBeginDrag");
         if (CanDrag)
         {
             cardManager.selectedCard = gameObject;
@@ -53,7 +58,7 @@ public class Card : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHand
     }
 
     public void OnDrag(PointerEventData eventData){
-        Debug.Log("OnDrag");
+        //Debug.Log("OnDrag");
         if (CanDrag)
         {
             Vector2 position;
@@ -65,8 +70,8 @@ public class Card : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHand
 
     public void OnEndDrag(PointerEventData eventData)
     {
-        Debug.Log("OnEndDrag");
-
+        //Debug.Log("OnEndDrag");
+        if (!CanDrag) return;
         // Если мышь не над зоной меню — возвращаем карту
         if (cardManager.hoveringMenu == null)
         {
@@ -78,13 +83,24 @@ public class Card : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHand
 
         string menuName = cardManager.hoveringMenu.name;
 
-        if (menuName.Contains("Discard"))
+        if (menuName.Contains("Discard") && cardManager.discardCount > 0)
         {
             ProcessDiscard();
         }
-        else if (menuName.Contains("Table"))
+        else if (menuName.Contains("CardSlot"))
         {
-            ProcessTable();
+            switch (menuName)
+            {
+                case "CardSlot1":
+                    CheckSlot(0);
+                    break;
+                case "CardSlot2":
+                    CheckSlot(1);
+                    break;
+                case "CardSlot3":
+                    CheckSlot(2);
+                    break;
+            }
         }
         else
         {
@@ -94,9 +110,25 @@ public class Card : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHand
 
         IsDragging = false;
     }
+
+    public void CheckSlot(int i)
+    {
+        if (cardManager.cardSlots[i] == null)
+        {
+            cardManager.cardSlots[i] = gameObject;
+            ProcessTable();
+        }
+        else
+        {
+            cardManager.selectedCard = null;
+            transform.position = transform.parent.position;
+        }
+    }
     
     private void ProcessDiscard()
     {
+        cardManager.lastDiscard = gameObject;
+        Discarded = true;
         CanDrag = false;
         cardManager.selectedCard = null;
 
@@ -106,6 +138,8 @@ public class Card : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHand
         transform.position = transform.parent.position;
 
         cardManager.cardsPlayerHand.Cards.Remove(gameObject);
+
+        cardManager.OnDiscard();
     }
 
     private void ProcessTable()

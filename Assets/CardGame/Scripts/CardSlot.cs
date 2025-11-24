@@ -1,9 +1,7 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class CardsTable : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+public class CardSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     public CardManager cardsManager;
     public void OnPointerEnter(PointerEventData eventData)
